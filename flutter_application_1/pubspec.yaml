@@ -1,0 +1,26 @@
+name: auto_diagnostic
+description: Aplicație DIY pentru diagnostic auto cu OBD2 și ghiduri interactive
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.2
+  shared_preferences: ^2.2.2
+  url_launcher: ^6.1.11
+  # Vom implementa OBD2 mai târziu cu package-uri stabile
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
