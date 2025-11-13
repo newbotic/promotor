@@ -13,7 +13,8 @@ dependencies:
   cupertino_icons: ^1.0.2
   shared_preferences: ^2.2.2
   url_launcher: ^6.1.11
-  # Vom implementa OBD2 mai târziu cu package-uri stabile
+  # flutter_blue_plus: ^1.8.0  # Comentează acest package
+  flutter_reactive_ble: ^5.2.0  # Package alternativ mai stabil
 
 dev_dependencies:
   flutter_test:

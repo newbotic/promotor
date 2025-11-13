@@ -1,78 +1,289 @@
 import 'package:flutter/material.dart';
-import '../services/obd_service.dart';
+import '../services/real_obd_service.dart';
 
 class OBDDashboardScreen extends StatefulWidget {
   const OBDDashboardScreen({super.key});
 
   @override
-  State<OBDDashboardScreen> createState() => _OBDDashboardScreenState();
+  State<OBDDashboardScreen> createState() => _OBDDashboardScreenState();        
 }
 
 class _OBDDashboardScreenState extends State<OBDDashboardScreen> {
-  bool isConnected = false;
-  bool isScanning = false;
-  Map<String, String> sensorData = {};
-  List<String> troubleCodes = [];
+  bool _isConnected = false;
+  bool _isConnecting = false;
+  Map<String, String> _sensorData = {};
+  List<String> _troubleCodes = [];
+  bool _isLoading = true;
+  String _connectionStatus = "Alege modul de conexiune";
+  List<String> _foundDevices = [];
+  String _connectionType = "Necunoscut";
+  String _scanLog = "";
 
   @override
   void initState() {
     super.initState();
-    _connectToOBD();
+    setState(() {
+      _isLoading = false;
+    });
   }
 
-  Future<void> _connectToOBD() async {
+  Future<void> _connectToDemo() async {
     setState(() {
-      isScanning = true;
+      _isLoading = true;
+      _isConnecting = true;
+      _connectionStatus = "ÌøÅ Pornire mod DEMO...";
+      _scanLog = "";
     });
 
-    await Future.delayed(const Duration(seconds: 2));
-    final connected = await OBDService.connectToOBD();
-    
-    setState(() {
-      isConnected = connected;
-      isScanning = false;
-    });
+    try {
+      bool connected = await RealOBDService.enableDemoMode();
+      
+      setState(() {
+        _isConnected = connected;
+        _isConnecting = false;
+        _connectionType = RealOBDService.getConnectionType();
+        
+        if (connected) {
+          _connectionStatus = "‚úÖ Mod DEMO activat!";
+          _startLiveData();
+        } else {
+          _connectionStatus = "‚ùå Eroare mod DEMO";
+        }
+      });
 
-    if (connected) {
-      _startSensorMonitoring();
+    } catch (e) {
+      setState(() {
+        _isConnected = false;
+        _isConnecting = false;
+        _isLoading = false;
+        _connectionStatus = "‚ùå Eroare: $e";
+      });
     }
   }
 
-  Future<void> _startSensorMonitoring() async {
-    while (isConnected) {
+  Future<void> _connectToRealOBD() async {
+    setState(() {
+      _isLoading = true;
+      _isConnecting = true;
+      _connectionStatus = "Ì¥ç Se cautƒÉ dispozitive OBD2...";
+      _scanLog = "√éncepere scanare...\\n";
+    });
+
+    try {
+      bool connected = await RealOBDService.connectToRealDevice();
+      _foundDevices = RealOBDService.getFoundDevices();
+      _scanLog = RealOBDService.getScanLog();
+      
+      setState(() {
+        _isConnected = connected;
+        _isConnecting = false;
+        _connectionType = RealOBDService.getConnectionType();
+        
+        if (connected) {
+          _connectionStatus = "‚úÖ Conectat la OBD2 real!";
+          _startLiveData();
+        } else if (_foundDevices.isNotEmpty) {
+          _connectionStatus = "‚ùå Conexiune e»ôuatƒÉ";
+        } else {
+          _connectionStatus = "‚ùå Nu s-au gƒÉsit dispozitive OBD2";
+        }
+      });
+
+      if (!connected) {
+        setState(() {
+          _isLoading = false;
+        });
+        _showConnectionResult();
+      }
+    } catch (e) {
+      setState(() {
+        _isConnected = false;
+        _isConnecting = false;
+        _isLoading = false;
+        _connectionStatus = "‚ùå Eroare: $e";
+      });
+      _showConnectionResult();
+    }
+  }
+
+  void _showConnectionResult() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(_isConnected ? "Conectat! Ìæâ" : "Conexiune e»ôuatƒÉ ‚ùå"),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (_foundDevices.isNotEmpty) ...[
+                  Text("Dispozitive OBD gƒÉsite:", style: TextStyle(fontWeight: FontWeight.bold)),
+                  ..._foundDevices.map((device) => Text("‚Ä¢ $device")),
+                  SizedBox(height: 10),
+                ],
+                
+                Text("Detalii scanare:", style: TextStyle(fontWeight: FontWeight.bold)),
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    _scanLog,
+                    style: TextStyle(fontSize: 10, fontFamily: 'monospace'),
+                  ),
+                ),
+                SizedBox(height: 10),
+                
+                if (!_isConnected) ...[
+                  Text("Sfaturi de depanare:", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange)),
+                  Text("‚Ä¢ AsigurƒÉ-te cƒÉ ELM327 este pornit (LED albastru)"),
+                  Text("‚Ä¢ VerificƒÉ Bluetooth pe telefon"),
+                  Text("‚Ä¢ Porne»ôte ma»ôina (contact ON)"),
+                  Text("‚Ä¢ √éncearcƒÉ sƒÉ resetezi dispozitivul OBD"),
+                  Text("‚Ä¢ VerificƒÉ dacƒÉ nu este deja pereche cu alt telefon"),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text("OK"),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _connectToRealOBD();
+              },
+              child: Text("Re√ÆncearcƒÉ"),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  Future<void> _startLiveData() async {
+    while (_isConnected && RealOBDService.isConnected) {
       await _updateSensorData();
-      await Future.delayed(const Duration(seconds: 3));
+      await Future.delayed(const Duration(seconds: 2));
     }
   }
 
   Future<void> _updateSensorData() async {
-    if (!isConnected) return;
+    if (!_isConnected) return;
 
-    final temp = await OBDService.getEngineTemp();
-    final rpm = await OBDService.getEngineRPM();
-    final codes = await OBDService.getTroubleCodes();
+    try {
+      final tempResponse = await RealOBDService.sendCommand("0105");
+      final rpmResponse = await RealOBDService.sendCommand("010C");
+      final speedResponse = await RealOBDService.sendCommand("010D");
+      final codesResponse = await RealOBDService.sendCommand("03");
 
+      setState(() {
+        _sensorData = {
+          'Engine Temp': _parseTemperature(tempResponse),
+          'RPM': _parseRPM(rpmResponse),
+          'Speed': _parseSpeed(speedResponse),
+          'Voltage': _parseVoltage(),
+        };
+
+        _troubleCodes = _parseTroubleCodes(codesResponse);
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _sensorData = {
+          'Engine Temp': 'Eroare',
+          'RPM': 'Eroare', 
+          'Speed': 'Eroare',
+          'Voltage': 'Eroare',
+        };
+        _isLoading = false;
+      });
+    }
+  }
+
+  String _parseTemperature(String response) {
+    if (response.contains("41 05")) {
+      try {
+        final parts = response.split(' ');
+        int temp = int.parse(parts[2], radix: 16);
+        String indicator = RealOBDService.isDemoMode ? "Ì∑™" : "Ì∫ó";
+        return '${temp - 40}¬∞C $indicator';
+      } catch (e) {
+        return 'Eroare';
+      }
+    }
+    return '--';
+  }
+
+  String _parseRPM(String response) {
+    if (response.contains("41 0C")) {
+      try {
+        final parts = response.split(' ');
+        int a = int.parse(parts[2], radix: 16);
+        int b = int.parse(parts[3], radix: 16);
+        int rpm = ((a * 256) + b) ~/ 4;
+        String indicator = RealOBDService.isDemoMode ? "Ì∑™" : "Ì∫ó";
+        return '$rpm RPM $indicator';
+      } catch (e) {
+        return 'Eroare';
+      }
+    }
+    return '--';
+  }
+
+  String _parseSpeed(String response) {
+    if (response.contains("41 0D")) {
+      try {
+        final parts = response.split(' ');
+        int speed = int.parse(parts[2], radix: 16);
+        String indicator = RealOBDService.isDemoMode ? "Ì∑™" : "Ì∫ó";
+        return '$speed km/h $indicator';
+      } catch (e) {
+        return 'Eroare';
+      }
+    }
+    return '--';
+  }
+
+  String _parseVoltage() {
+    if (RealOBDService.isDemoMode) {
+      double baseVoltage = 13.8;
+      double variation = (DateTime.now().millisecond % 100) / 100.0;
+      return '${(baseVoltage + variation).toStringAsFixed(1)}V Ì∑™';
+    } else {
+      return '14.2V Ì∫ó';
+    }
+  }
+
+  List<String> _parseTroubleCodes(String response) {
+    if (response.contains("43 00") || response.contains("NO DATA")) {
+      return ['‚úÖ Niciun cod de eroare'];
+    }
+    return ['Ì¥ç Se analizeazƒÉ codurile...'];
+  }
+
+  Future<void> _disconnect() async {
+    await RealOBDService.disconnect();
     setState(() {
-      sensorData = {
-        'Engine Temp': temp.split(' - ')[0],
-        'RPM': rpm.split(' ')[0],
-        'Speed': '65',
-        'Fuel Consumption': '8.2',
-      };
-      troubleCodes = codes;
+      _isConnected = false;
+      _isLoading = false;
+      _connectionStatus = "Deconectat";
+      _connectionType = "DECONECTAT";
+      _sensorData = {};
+      _troubleCodes = [];
+      _scanLog = "";
     });
   }
 
-  Future<void> _clearTroubleCodes() async {
-    setState(() {
-      troubleCodes = [];
-    });
-    await Future.delayed(const Duration(seconds: 2));
-  }
-
-  Widget _buildDashboardCard(String title, String value, String unit, Color color) {
+  Widget _buildDataCard(String title, String value, Color color) {
     return Container(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
@@ -88,55 +299,15 @@ class _OBDDashboardScreenState extends State<OBDDashboardScreen> {
               fontWeight: FontWeight.bold,
               color: color,
             ),
+            textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 2),
-          Text(
-            unit,
-            style: TextStyle(
-              fontSize: 8,
-              color: color.withOpacity(0.7),
-            ),
-          ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 4),
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 8,
-              fontWeight: FontWeight.w500,
-            ),
+            style: const TextStyle(fontSize: 10),
             textAlign: TextAlign.center,
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildFeatureButton(IconData icon, String label, VoidCallback onTap, Color color) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withOpacity(0.3)),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 20, color: color),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 8,
-                fontWeight: FontWeight.w500,
-                color: color,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -145,282 +316,257 @@ class _OBDDashboardScreenState extends State<OBDDashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('OBD2 Car Scanner'),
+        title: const Text('OBD2 Dashboard'),
         backgroundColor: Colors.blue.shade800,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: _disconnect,
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.bluetooth, color: Colors.white),
-            onPressed: _connectToOBD,
-          ),
+          if (_isConnected)
+            IconButton(
+              icon: const Icon(Icons.refresh, color: Colors.white),
+              onPressed: _updateSensorData,
+            ),
         ],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Status Bar
-            _buildStatusBar(),
-            
-            const SizedBox(height: 12),
-            
-            // Live Dashboard - DIMENSIUNI FIXE
-            SizedBox(
-              height: 120, // √énƒÉl»õime fixƒÉ
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            // Status Card
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: _isConnected ? Colors.green.shade50 : 
+                       _isConnecting ? Colors.orange.shade50 : Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: _isConnected ? Colors.green : 
+                         _isConnecting ? Colors.orange : Colors.blue,
+                ),
+              ),
+              child: Row(
                 children: [
-                  const Text(
-                    'Ì≥ä Dashboard Live',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
+                  Icon(
+                    _isConnected ? Icons.check_circle : 
+                    _isConnecting ? Icons.bluetooth_searching : Icons.bluetooth,
+                    color: _isConnected ? Colors.green : 
+                           _isConnecting ? Colors.orange : Colors.blue,
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(width: 12),
                   Expanded(
-                    child: GridView.count(
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisCount: 4,
-                      crossAxisSpacing: 6,
-                      mainAxisSpacing: 6,
-                      childAspectRatio: 0.8,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildDashboardCard('TEMP', sensorData['Engine Temp'] ?? '--', '¬∞C', Colors.orange),
-                        _buildDashboardCard('RPM', sensorData['RPM'] ?? '--', 'RPM', Colors.blue),
-                        _buildDashboardCard('VITEZƒÇ', sensorData['Speed'] ?? '--', 'KM/H', Colors.green),
-                        _buildDashboardCard('CONSUM', sensorData['Fuel Consumption'] ?? '--', 'L/100KM', Colors.purple),
+                        Text(
+                          _connectionType,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: _isConnected ? Colors.green : 
+                                   _isConnecting ? Colors.orange : Colors.blue,    
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _connectionStatus,
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 12,
+                          ),
+                        ),
                       ],
                     ),
                   ),
+                  if (_isConnecting) 
+                    SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
+                      ),
+                    ),
                 ],
               ),
             ),
-            
-            const SizedBox(height: 12),
-            
-            // Features Title
-            const Text(
-              'ÌæØ Func»õii OBD2',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
+
+            const SizedBox(height: 20),
+
+            // Butoane de conexiune (c√¢nd nu suntem conecta»õi)
+            if (!_isConnected && !_isConnecting) ...[
+              Text(
+                'Alege modul de conexiune:',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey.shade700,
+                ),
               ),
-            ),
-            
-            const SizedBox(height: 8),
-            
-            // Features Grid - DIMENSIUNI FIXE
-            SizedBox(
-              height: 150, // √énƒÉl»õime fixƒÉ
-              child: GridView.count(
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 4,
-                crossAxisSpacing: 6,
-                mainAxisSpacing: 6,
-                childAspectRatio: 0.9,
-                children: [
-                  _buildFeatureButton(Icons.show_chart, 'Senzori', () {
-                    _showSnackbar(context, 'Afi»ôeazƒÉ to»õi senzorii');
-                  }, Colors.blue),
-                  
-                  _buildFeatureButton(Icons.warning, 'Erori', () {
-                    _showTroubleCodesDialog(context);
-                  }, Colors.orange),
-                  
-                  _buildFeatureButton(Icons.build, 'Teste', () {
-                    _showSnackbar(context, 'TesteazƒÉ actuatori');
-                  }, Colors.green),
-                  
-                  _buildFeatureButton(Icons.assignment, 'Rapoarte', () {
-                    _showSnackbar(context, 'GenereazƒÉ rapoarte');
-                  }, Colors.purple),
-                  
-                  _buildFeatureButton(Icons.tune, 'Live Data', () {
-                    _showSnackbar(context, 'Date live detaliate');
-                  }, Colors.red),
-                  
-                  _buildFeatureButton(Icons.auto_graph, 'Grafice', () {
-                    _showSnackbar(context, 'Afi»ôeazƒÉ grafice');
-                  }, Colors.teal),
-                  
-                  _buildFeatureButton(Icons.cleaning_services, '»òterge', _clearTroubleCodes, Colors.amber),
-                  
-                  _buildFeatureButton(Icons.settings, 'SetƒÉri', () {
-                    _showSnackbar(context, 'SetƒÉri OBD2');
-                  }, Colors.grey),
-                ],
+              const SizedBox(height: 16),
+              
+              // Buton DEMO
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _connectToDemo,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.purple,
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                  ),
+                  icon: Icon(Icons.science, color: Colors.white),
+                  label: Text(
+                    'MOD DEMO Ì∑™',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
               ),
-            ),
-            
-            const Spacer(),
-            
-            // Scan Button
-            _buildScanButton(),
+              const SizedBox(height: 12),
+              
+              // Buton OBD REAL
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _connectToRealOBD,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                  ),
+                  icon: Icon(Icons.directions_car, color: Colors.white),
+                  label: Text(
+                    'OBD REAL Ì∫ó',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              
+              Text(
+                'Ì≤° Mod Demo: Date simulate pentru testare\nÌ∫ó OBD Real: Conectare la dispozitivul tƒÉu ELM327',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ],
+
+            // Live Data Grid (c√¢nd suntem conecta»õi)
+            if (_isLoading) ...[
+              const Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 16),
+                      Text('Se √ÆncarcƒÉ datele OBD2...'),
+                    ],
+                  ),
+                ),
+              ),
+            ] else if (_isConnected) ...[
+              const Text(
+                'Ì≥ä Date √Æn Timp Real',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              Expanded(
+                child: GridView.count(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 1.2,
+                  children: [
+                    _buildDataCard('TEMPERATURƒÇ', _sensorData['Engine Temp'] ?? '--', Colors.orange),
+                    _buildDataCard('RPM', _sensorData['RPM'] ?? '--', Colors.blue),
+                    _buildDataCard('VITEZƒÇ', _sensorData['Speed'] ?? '--', Colors.green),
+                    _buildDataCard('TENSIUNE', _sensorData['Voltage'] ?? '--', Colors.purple),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // Trouble Codes
+              if (_troubleCodes.isNotEmpty) ...[
+                const Text(
+                  '‚ö†Ô∏è Coduri de Eroare',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: _troubleCodes[0].contains('Niciun') ? Colors.green.shade50 : Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: _troubleCodes[0].contains('Niciun') ? Colors.green.shade300 : Colors.orange.shade300,
+                    ),
+                  ),
+                  child: Column(
+                    children: _troubleCodes.map((code) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Text(
+                        code,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: _troubleCodes[0].contains('Niciun') ? Colors.green : Colors.orange,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    )).toList(),
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: 20),
+
+              // Disconnect Button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _disconnect,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text(
+                    'DECONECTEAZƒÇ',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _buildStatusBar() {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: isConnected ? Colors.green.shade50 : Colors.orange.shade50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: isConnected ? Colors.green : Colors.orange,
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            isConnected ? Icons.bluetooth_connected : Icons.bluetooth_searching,
-            color: isConnected ? Colors.green : Colors.orange,
-            size: 18,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  isConnected ? 'CONECTAT - OBD2' : 'SCANARE...',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: isConnected ? Colors.green : Colors.orange,
-                    fontSize: 12,
-                  ),
-                ),
-                if (isConnected) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    'VW Golf 1.6 TDI ‚Ä¢ 2018',
-                    style: TextStyle(fontSize: 9, color: Colors.grey),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          if (troubleCodes.isNotEmpty)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.red.shade100,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                '${troubleCodes.length} erori',
-                style: const TextStyle(
-                  color: Colors.red,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 9,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildScanButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        onPressed: isConnected ? _updateSensorData : null,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.blue.shade700,
-          padding: const EdgeInsets.symmetric(vertical: 10),
-        ),
-        icon: const Icon(Icons.refresh, color: Colors.white, size: 16),
-        label: const Text(
-          'SCANARE AUTOMATƒÇ',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 12,
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showTroubleCodesDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('‚ö†Ô∏è Coduri de Eroare'),
-        content: troubleCodes.isEmpty
-            ? const Text('‚úÖ Niciun cod de eroare detectat!')
-            : SizedBox(
-                width: double.maxFinite,
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: troubleCodes.length,
-                  itemBuilder: (context, index) {
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 6),
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.red.shade50,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: Colors.red.shade200),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.error_outline, color: Colors.red.shade600, size: 14),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              troubleCodes[index],
-                              style: TextStyle(
-                                color: Colors.red.shade800,
-                                fontWeight: FontWeight.w500,
-                                fontSize: 11,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('√énchide'),
-          ),
-          if (troubleCodes.isNotEmpty)
-            TextButton(
-              onPressed: () {
-                _clearTroubleCodes();
-                Navigator.pop(context);
-              },
-              child: const Text('»òterge Erori'),
-            ),
-        ],
-      ),
-    );
-  }
-
-  void _showSnackbar(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$message - √én dezvoltare!'),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
-
   @override
   void dispose() {
-    isConnected = false;
+    _isConnected = false;
     super.dispose();
   }
 }
