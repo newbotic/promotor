@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'problem_list_screen.dart';
+import 'obd_dashboard_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -7,100 +8,289 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Auto Diagnostic DIY'),
-        backgroundColor: Colors.blue.shade700,
-        elevation: 0,
+      backgroundColor: Colors.grey.shade50,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // HEADER SECTION
+            _buildHeaderSection(),
+            
+            // QUICK STATS SECTION
+            _buildQuickStatsSection(),
+            
+            // MAIN FEATURES GRID
+            Expanded(
+              child: _buildFeaturesGrid(context),
+            ),
+          ],
+        ),
       ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF1976D2), Color(0xFF42A5F5)],
+    );
+  }
+
+  Widget _buildHeaderSection() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Colors.blue.shade700, Colors.blue.shade900],
+        ),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(20),
+          bottomRight: Radius.circular(20),
+        ),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: Colors.white.withOpacity(0.2),
+                child: const Icon(Icons.directions_car, color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'BunƒÉ ziua!',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                      ),
+                    ),
+                    Text(
+                      'Auto Diagnostic Pro',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.settings_outlined, color: Colors.white, size: 20),
+                onPressed: () {},
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.speed, color: Colors.white, size: 16),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Scanner OBD2 profesionist',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickStatsSection() {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: const Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _StatItem(icon: Icons.search, value: '5', label: 'Probleme'),
+          _StatItem(icon: Icons.computer, value: 'OBD2', label: 'Scanner'),
+          _StatItem(icon: Icons.history, value: '0', label: 'Istoric'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeaturesGrid(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: GridView.count(
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 1.1,
+        children: [
+          _FeatureCard(
+            icon: Icons.search,
+            title: 'DIAGNOSTIC\nPROBLEME',
+            subtitle: '5 probleme comune',
+            color: Colors.blue,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ProblemListScreen(),
+                ),
+              );
+            },
+          ),
+          _FeatureCard(
+            icon: Icons.computer,
+            title: 'OBD2 CAR\nSCANNER',
+            subtitle: 'Scanner profesionist',
+            color: Colors.green,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const OBDDashboardScreen(),
+                ),
+              );
+            },
+          ),
+          _FeatureCard(
+            icon: Icons.history,
+            title: 'ISTORIC\nDIAGNOSTIC',
+            subtitle: 'Vezi istoricul',
+            color: Colors.orange,
+            onTap: () {
+              _showComingSoon(context);
+            },
+          ),
+          _FeatureCard(
+            icon: Icons.person,
+            title: 'PROFIL\nMA»òINƒÇ',
+            subtitle: 'SetƒÉri vehicul',
+            color: Colors.purple,
+            onTap: () {
+              _showComingSoon(context);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showComingSoon(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Ì∫ß Func»õionalitate √Æn dezvoltare!'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+}
+
+class _StatItem extends StatelessWidget {
+  final IconData icon;
+  final String value;
+  final String label;
+
+  const _StatItem({
+    required this.icon,
+    required this.value,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Icon(icon, color: Colors.blue, size: 20),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
           ),
         ),
-        child: Center(
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 10,
+            color: Colors.grey,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _FeatureCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _FeatureCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(12),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.car_repair,
-                  size: 100,
-                  color: Colors.blue.shade700,
-                ),
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: color.withOpacity(0.2),
+                child: Icon(icon, color: color, size: 22),
               ),
-              const SizedBox(height: 40),
-              const Text(
-                'Auto Diagnostic',
-                style: TextStyle(
-                  fontSize: 32,
+              const SizedBox(height: 8),
+              Text(
+                title,
+                style: const TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                'Diagnosticare simplƒÉ pentru ma»ôina ta',
-                style: TextStyle(
-                  fontSize: 18,
-                  color: Colors.white70,
+                  fontSize: 14,
+                  height: 1.2,
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 50),
-              ElevatedButton(
-                onPressed: () {
-                  // Navigare DIRECTƒÇ fƒÉrƒÉ dialog
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const ProblemListScreen(),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.blue.shade700,
-                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
-                  textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  color: Colors.grey.shade600,
+                  fontSize: 10,
                 ),
-                child: const Text('√éNCEPE DIAGNOSTICUL'),
-              ),
-              const SizedBox(height: 20),
-              TextButton(
-                onPressed: () {
-                  // Doar butonul "Despre aplica»õie" aratƒÉ dialog
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('Despre Auto Diagnostic'),
-                      content: const Text(
-                        'Aplica»õie pentru diagnostic auto DIY care combinƒÉ:\n\n'
-                        'Ì¥ß Ghiduri pas-cu-pas\n'
-                        'Ì≥ä Citire date OBD2\n'
-                        'ÌæØ Sugestii personalizate\n\n'
-                        'Perfect pentru pasiona»õii auto »ôi mecanicii amatori!',
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('√énchide'),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text('Despre aplica»õie'),
+                textAlign: TextAlign.center,
               ),
             ],
           ),
