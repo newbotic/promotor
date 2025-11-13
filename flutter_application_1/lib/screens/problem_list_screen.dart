@@ -6,29 +6,20 @@ import 'diagnosis_guide_screen.dart';
 class ProblemListScreen extends StatelessWidget {
   const ProblemListScreen({super.key});
 
-  // Date mock - vor fi înlocuite cu date reale
   final List<CarProblem> problems = const [
     CarProblem(
       id: '1',
       title: 'Termostat blocat deschis',
       description: 'Motorul nu ajunge la temperatura optimă',
       category: 'cooling',
-      symptoms: [
-        'Motorul se încălzește foarte lent',
-        'Încălzirea habitaclului funcționează prost',
-        'Consum crescut de combustibil',
-      ],
+      symptoms: ['Motorul se încălzește foarte lent'],
       steps: [
         DiagnosisStep(
-          title: 'Verificare temperatură OBD2',
+          title: 'Verificare temperatură',
           description: 'Monitorizează temperatura motorului',
           type: 'obd',
-          instructions: [
-            'Conectează-te la OBD2 cu motorul rece',
-            'Pornește motorul și lasă-l la ralanti',
-            'Monitorizează temperatura în primii 10 minute',
-          ],
-          expectedResult: 'Temperatura crește rapid la 80-90°C',
+          instructions: ['Pornește motorul rece', 'Monitorizează temperatura'],
+          expectedResult: 'Temperatura crește rapid',
         ),
       ],
     ),
@@ -37,22 +28,14 @@ class ProblemListScreen extends StatelessWidget {
       title: 'Sondă Lambda defectă',
       description: 'Problemă la senzorul de oxigen',
       category: 'engine',
-      symptoms: [
-        'Consum crescut de combustibil',
-        'Putere redusă la acceleratie',
-        'Eroare Check Engine',
-      ],
+      symptoms: ['Consum crescut de combustibil'],
       steps: [
         DiagnosisStep(
-          title: 'Citire coduri eroare OBD2',
-          description: 'Verifică dacă există coduri pentru sondă lambda',
+          title: 'Citire coduri eroare',
+          description: 'Verifică codurile OBD2',
           type: 'obd',
-          instructions: [
-            'Conectează-te la OBD2',
-            'Citește codurile de eroare',
-            'Notează orice cod P0130-P0167',
-          ],
-          expectedResult: 'Niciun cod de eroare pentru sonda lambda',
+          instructions: ['Conectează-te la OBD2', 'Citește codurile'],
+          expectedResult: 'Niciun cod de eroare',
         ),
       ],
     ),
@@ -61,46 +44,30 @@ class ProblemListScreen extends StatelessWidget {
       title: 'EGR blocată',
       description: 'Sistem EGR nu funcționează corect',
       category: 'engine',
-      symptoms: [
-        'Motorul merge neregulat la ralanti',
-        'Pierdere de putere',
-        'Fum negru la eșapament',
-      ],
+      symptoms: ['Motorul merge neregulat'],
       steps: [
         DiagnosisStep(
-          title: 'Verificare vizuală EGR',
-          description: 'Inspectează vizual supapa EGR',
+          title: 'Verificare vizuală',
+          description: 'Inspectează supapa EGR',
           type: 'visual',
-          instructions: [
-            'Localizează supapa EGR pe motor',
-            'Verifică conexiunile și furtunele',
-            'Caută urme de carbon sau depuneri',
-          ],
-          expectedResult: 'Supapa curată și conexiuni etanșe',
+          instructions: ['Localizează supapa EGR'],
+          expectedResult: 'Supapa curată',
         ),
       ],
     ),
     CarProblem(
       id: '4',
-      title: 'Bobina de aprindere defectă',
+      title: 'Bobina defectă',
       description: 'Problemă la sistemul de aprindere',
       category: 'electrical',
-      symptoms: [
-        'Motorul "scapără" sau tremură',
-        'Pierdere de putere',
-        'Consum crescut',
-      ],
+      symptoms: ['Motorul "scapără"'],
       steps: [
         DiagnosisStep(
-          title: 'Testare bobine OBD2',
-          description: 'Verifică misfire cu OBD2',
+          title: 'Testare bobine',
+          description: 'Verifică misfire',
           type: 'obd',
-          instructions: [
-            'Conectează-te la OBD2',
-            'Citește codurile de misfire (P0300-P0308)',
-            'Monitorizează datele în timp real la acceleratie',
-          ],
-          expectedResult: 'Niciun misfire detectat',
+          instructions: ['Conectează-te la OBD2'],
+          expectedResult: 'Niciun misfire',
         ),
       ],
     ),
@@ -109,22 +76,14 @@ class ProblemListScreen extends StatelessWidget {
       title: 'Senzor MAF murdar',
       description: 'Senzor debitmetru aer necesita curățare',
       category: 'engine',
-      symptoms: [
-        'Acceleratie neregulată',
-        'Motorul se oprește la ralanti',
-        'Consum crescut',
-      ],
+      symptoms: ['Acceleratie neregulată'],
       steps: [
         DiagnosisStep(
-          title: 'Verificare date MAF OBD2',
+          title: 'Verificare date MAF',
           description: 'Monitorizează debitul de aer',
           type: 'obd',
-          instructions: [
-            'Conectează-te la OBD2',
-            'Citește valorile MAF la ralanti',
-            'Verifică valorile la acceleratie bruscă',
-          ],
-          expectedResult: 'Valori MAF stabile și în parametri normali',
+          instructions: ['Conectează-te la OBD2'],
+          expectedResult: 'Valori MAF stabile',
         ),
       ],
     ),
@@ -137,10 +96,8 @@ class ProblemListScreen extends StatelessWidget {
         title: const Text('Alege Problema'),
         backgroundColor: Colors.blue.shade700,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pop(context);
-          },
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
         ),
       ),
       body: ListView.builder(

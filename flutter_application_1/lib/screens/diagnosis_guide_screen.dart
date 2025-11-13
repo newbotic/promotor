@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/car_problem.dart';
 import '../widgets/diagnosis_step_widget.dart';
-import '../services/obd_service.dart';
 
 class DiagnosisGuideScreen extends StatefulWidget {
   final CarProblem problem;
@@ -17,28 +16,8 @@ class DiagnosisGuideScreen extends StatefulWidget {
 
 class _DiagnosisGuideScreenState extends State<DiagnosisGuideScreen> {
   int currentStep = 0;
-  bool isLoading = false;
-  String obdData = 'ApasÄƒ "SIMULEAZÄ‚ OBD2" pentru a vedea datele';
-  Map<String, String> problemData = {};
-
-  @override
-  void initState() {
-    super.initState();
-    _loadProblemData();
-  }
-
-  Future<void> _loadProblemData() async {
-    setState(() {
-      isLoading = true;
-    });
-    
-    final data = await OBDService.getProblemSpecificData(widget.problem.id);
-    
-    setState(() {
-      problemData = data;
-      isLoading = false;
-    });
-  }
+  String obdData = 'ApasÄƒ butonul pentru a simula date OBD2';
+  bool showOBDData = false;
 
   @override
   Widget build(BuildContext context) {
@@ -50,58 +29,54 @@ class _DiagnosisGuideScreenState extends State<DiagnosisGuideScreen> {
         title: Text(widget.problem.title),
         backgroundColor: Colors.blue.shade700,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () {
-            Navigator.pop(context);
+            Navigator.of(context).pop();
           },
         ),
-        actions: [
-          if (currentStep > 0)
-            IconButton(
-              icon: const Icon(Icons.skip_previous),
-              onPressed: () {
-                setState(() {
-                  currentStep--;
-                });
-              },
-            ),
-          if (currentStep < steps.length - 1)
-            IconButton(
-              icon: const Icon(Icons.skip_next),
-              onPressed: () {
-                setState(() {
-                  currentStep++;
-                });
-              },
-            ),
-        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header cu progres
+            // Header cu progres - REPARAT
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.blue.shade50,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Row(
+              child: Column(
                 children: [
-                  Text(
-                    'Pasul \${currentStep + 1}/\${steps.length}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
+                  Row(
+                    children: [
+                      Text(
+                        'Pasul \${currentStep + 1}/\${steps.length}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        '\${((currentStep + 1) / steps.length * 100).toStringAsFixed(0)}%',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue,
+                        ),
+                      ),
+                    ],
                   ),
-                  const Spacer(),
-                  LinearProgressIndicator(
-                    value: (currentStep + 1) / steps.length,
-                    backgroundColor: Colors.grey.shade300,
-                    color: Colors.blue,
+                  const SizedBox(height: 8),
+                  // LinearProgressIndicator cu dimensiuni fixe
+                  SizedBox(
+                    height: 8,
+                    child: LinearProgressIndicator(
+                      value: (currentStep + 1) / steps.length,
+                      backgroundColor: Colors.grey.shade300,
+                      color: Colors.blue,
+                    ),
                   ),
                 ],
               ),
@@ -121,7 +96,7 @@ class _DiagnosisGuideScreenState extends State<DiagnosisGuideScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'í³‹ Simptome identificate:',
+                    'ï¿½ï¿½ Simptome identificate:',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
@@ -149,103 +124,74 @@ class _DiagnosisGuideScreenState extends State<DiagnosisGuideScreen> {
             
             const SizedBox(height: 20),
             
-            // Sectiune OBD2 SimulatÄƒ - AFIÈ˜ATÄ‚ MEREU
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.green.shade50,
-                border: Border.all(color: Colors.green.shade300),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.computer, color: Colors.green, size: 24),
-                      SizedBox(width: 8),
-                      Text(
-                        'í´§ Diagnostic OBD2 (Simulat)',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
+            // Sectiune OBD2 SimulatÄƒ - doar pentru paÈ™ii OBD
+            if (currentDiagnosisStep.type == 'obd') ...[
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  border: Border.all(color: Colors.green.shade300),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.computer, color: Colors.green),
+                        SizedBox(width: 8),
+                        Text(
+                          'í´§ Diagnostic OBD2',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    
+                    ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          showOBDData = true;
+                          obdData = _getOBDDataForProblem(widget.problem.id);
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        minimumSize: const Size(double.infinity, 50),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  if (isLoading)
-                    const Center(
-                      child: Column(
-                        children: [
-                          CircularProgressIndicator(),
-                          SizedBox(height: 8),
-                          Text('Se Ã®ncarcÄƒ datele OBD2...'),
-                        ],
-                      ),
-                    )
-                  else
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.green.shade200),
-                      ),
-                      child: Text(
-                        obdData,
-                        style: const TextStyle(
+                      child: const Text(
+                        'SIMULEAZÄ‚ CITIRE OBD2',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
                           fontSize: 16,
-                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ),
-                  
-                  const SizedBox(height: 16),
-                  
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: _simulateOBDData,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green.shade600,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                          child: const Text(
-                            'SIMULEAZÄ‚ OBD2',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
+                    
+                    if (showOBDData) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.green.shade200),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: _refreshAllData,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue.shade600,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                          child: const Text(
-                            'ReÃ®mprospÄƒteazÄƒ',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
+                        child: Text(
+                          obdData,
+                          style: const TextStyle(fontSize: 14),
                         ),
                       ),
                     ],
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
+              const SizedBox(height: 20),
+            ],
             
             const Spacer(),
             
@@ -258,15 +204,10 @@ class _DiagnosisGuideScreenState extends State<DiagnosisGuideScreen> {
                       onPressed: () {
                         setState(() {
                           currentStep--;
+                          showOBDData = false;
                         });
                       },
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                      child: const Text(
-                        'PASUL ANTERIOR',
-                        style: TextStyle(fontSize: 16),
-                      ),
+                      child: const Text('PASUL ANTERIOR'),
                     ),
                   ),
                 if (currentStep > 0) const SizedBox(width: 10),
@@ -276,24 +217,16 @@ class _DiagnosisGuideScreenState extends State<DiagnosisGuideScreen> {
                         ? () {
                             setState(() {
                               currentStep++;
+                              showOBDData = false;
                             });
                           }
                         : () {
                             _showDiagnosisComplete(context);
                           },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue.shade700,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
                     child: Text(
                       currentStep < steps.length - 1 
                           ? 'URMÄ‚TORUL PAS' 
-                          : 'FINALIZEAZÄ‚ DIAGNOSTIC',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
+                          : 'FINALIZEAZÄ‚',
                     ),
                   ),
                 ),
@@ -305,68 +238,33 @@ class _DiagnosisGuideScreenState extends State<DiagnosisGuideScreen> {
     );
   }
 
-  Future<void> _simulateOBDData() async {
-    setState(() {
-      isLoading = true;
-      obdData = 'Se conecteazÄƒ la OBD2...';
-    });
-    
-    await Future.delayed(const Duration(seconds: 2));
-    
-    final diagnostic = problemData['diagnostic'] ?? 'Date OBD2 simulate cu succes!';
-    
-    setState(() {
-      obdData = diagnostic;
-      isLoading = false;
-    });
-  }
-
-  Future<void> _refreshAllData() async {
-    setState(() {
-      isLoading = true;
-      obdData = 'ReÃ®mprospÄƒtare date...';
-    });
-    
-    await _loadProblemData();
-    await Future.delayed(const Duration(seconds: 1));
-    
-    final diagnostic = problemData['diagnostic'] ?? 'Date reÃ®mprospÄƒtate!';
-    
-    setState(() {
-      obdData = diagnostic;
-      isLoading = false;
-    });
+  String _getOBDDataForProblem(String problemId) {
+    switch (problemId) {
+      case '1': // Termostat
+        return 'í¼¡ï¸ Temperatura motor: 45Â°C\níº€ RPM: 850\nâš ï¸ CreÈ™tere lentÄƒ - termostat blocat deschis';
+      case '2': // Sonda Lambda
+        return 'í¼¡ï¸ Temperatura: 87Â°C\níº€ RPM: 2100\nâš ï¸ SondÄƒ Lambda: 0.1V (scÄƒzut)';
+      case '3': // EGR
+        return 'í¼¡ï¸ Temperatura: 92Â°C\níº€ RPM: 750\nâš ï¸ EGR: debit 0% (blocat)';
+      case '4': // Bobina
+        return 'í¼¡ï¸ Temperatura: 85Â°C\níº€ RPM: 3200\nâš ï¸ Misfire cilindrul 3';
+      case '5': // MAF
+        return 'ï¿½ï¿½ï¸ Temperatura: 88Â°C\níº€ RPM: 1800\nâš ï¸ MAF: 2.1 g/s (instabil)';
+      default:
+        return 'Date OBD2 simulate cu succes!';
+    }
   }
 
   void _showDiagnosisComplete(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('í¾‰ Diagnostic Complet!'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Ai parcurs toÈ›i paÈ™ii de diagnostic pentru aceastÄƒ problemÄƒ.'),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.green.shade50,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Text(
-                'í²¡ Sfat: Pentru funcÈ›ionalitate OBD2 realÄƒ, '
-                'vom integra un adaptor Bluetooth OBD2 Ã®n versiunea urmÄƒtoare!',
-                style: TextStyle(fontSize: 14),
-              ),
-            ),
-          ],
-        ),
+        title: const Text('Diagnostic Complet'),
+        content: const Text('Ai parcurs toÈ›i paÈ™ii de diagnostic pentru aceastÄƒ problemÄƒ.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('OK', style: TextStyle(fontSize: 16)),
+            child: const Text('OK'),
           ),
         ],
       ),
